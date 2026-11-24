@@ -42,11 +42,13 @@ def edf_path(pid: str, task: str) -> Path:
     return C.DATA / pid / "eeg" / f"{pid}_task-{task}_eeg.edf"
 
 
-def load_filtered(pid: str, task: str):
-    """Return (mne.io.Raw with EEG only, filtered; dict of raw auxiliary channels)."""
-    import mne
-    mne.set_log_level("ERROR")
-    raw = mne.io.read_raw_edf(edf_path(pid, task), preload=True)
+def prepare(raw):
+    """Split a loaded recording into filtered EEG and raw auxiliary channels.
+
+    Works on any preloaded mne Raw (a real EDF or a simulated RawArray), so the
+    simulation tests in src/simulate.py exercise exactly the code used on real data.
+    Returns (raw with EEG channels only, band-pass filtered; dict of auxiliary channels).
+    """
     names = raw.ch_names
     eeg = [n for n in names if n not in C.NON_EEG_NAMES and not n.startswith(C.NON_EEG_PREFIXES)]
     aux_names = [n for n in names if n.startswith(("EQ_", "CQ_")) or n in ("INTERPOLATED", "SaturationFlag")]
@@ -55,6 +57,13 @@ def load_filtered(pid: str, task: str):
     raw.set_channel_types({n: "eeg" for n in eeg})
     raw.filter(C.L_FREQ, C.H_FREQ, fir_design="firwin")
     return raw, aux
+
+
+def load_filtered(pid: str, task: str):
+    """Return (mne.io.Raw with EEG only, filtered; dict of raw auxiliary channels)."""
+    import mne
+    mne.set_log_level("ERROR")
+    return prepare(mne.io.read_raw_edf(edf_path(pid, task), preload=True))
 
 
 def epoch_starts(n_times: int, sfreq: float) -> np.ndarray:

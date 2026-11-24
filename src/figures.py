@@ -55,18 +55,18 @@ def fig1_flow():
 
 
 def fig2_examples(df):
-    from fit_specparam import fit_one, roi_spectrum
+    from fit_specparam import fit_one, load_psd, roi_spectrum
+    df = df[df["fit_ok"]]
     picks = {"Clear peak": df[df["alpha_present"]].nlargest(1, "alpha_pw"),
              "Weak peak": df[df["alpha_present"]].nsmallest(1, "alpha_pw"),
-             "No peak": df[~df["alpha_present"].astype(bool)].nlargest(1, "r2")}
+             "No peak": df[~df["alpha_present"]].nlargest(1, "r2")}
     fig, axes = plt.subplots(1, 3, figsize=(7, 2.3), sharey=True)
     for ax, (title, r) in zip(axes, picks.items()):
         if r.empty:
             continue
         r = r.iloc[0]
-        z = np.load(cfg.DERIV / "psd" / f"{r['participant_id']}_ec.npz")
-        spec = roi_spectrum(z["psd"].astype(float), list(z["ch_names"]), cfg.ROI_PRIMARY)
-        fm = fit_one(z["freqs"], spec)
+        freqs, psd, names = load_psd(r["participant_id"], "ec")
+        fm = fit_one(freqs, roi_spectrum(psd, names, cfg.ROI_PRIMARY))
         ax.plot(fm.freqs, fm.power_spectrum, color="0.3", lw=1, label="Spectrum")
         ax.plot(fm.freqs, fm.fooofed_spectrum_, color="#CC79A7", lw=1.2, label="Full fit")
         ax.plot(fm.freqs, fm._ap_fit, color="#009E73", ls="--", lw=1, label="1/f fit")
@@ -95,7 +95,7 @@ def fig3_threshold():
 
 def fig4_forest():
     res = pd.read_csv(cfg.RESULTS / "confirmatory.csv")
-    d = res[res["test"].str.startswith("H2")].reset_index(drop=True)
+    d = res[res["test"].str.startswith("H2") & res["estimate"].notna()].reset_index(drop=True)
     fig, ax = plt.subplots(figsize=(4, 1.8))
     for i, r in d.iterrows():
         ax.errorbar(r["estimate"], i, xerr=[[r["estimate"] - r["ci_low"]], [r["ci_high"] - r["estimate"]]],
@@ -143,8 +143,7 @@ def fig6_spec_curve():
     save(fig, "fig6_spec_curve")
 
 
-def main() -> None:
-    require_prereg()
+def run() -> None:
     df = load()
     fig1_flow()
     fig2_examples(df)
@@ -153,6 +152,11 @@ def main() -> None:
     fig5_age(df)
     fig6_spec_curve()
     print("Figures written to", cfg.FIGURES)
+
+
+def main() -> None:
+    require_prereg()
+    run()
 
 
 if __name__ == "__main__":

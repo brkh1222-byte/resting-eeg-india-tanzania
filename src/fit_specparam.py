@@ -16,7 +16,7 @@ written to results/features_grid.csv.
 
 Blocked until the pre-registration is committed.
 
-Run:  .venv/bin/python src/fit_specparam.py [--jobs 6] [--no-grid]
+Run:  .venv/bin/python src/fit_specparam.py [--jobs 2] [--no-grid]
 Outputs: results/features.csv, results/features_grid.csv, results/fit_failures.csv
 """
 import argparse
@@ -52,9 +52,16 @@ def fit_one(freqs, spectrum, fit_range=C.FIT_RANGE, mode=C.APERIODIC_MODE,
 
 
 def features(fm, band=C.ALPHA_BAND) -> dict:
-    """Alpha, theta and aperiodic features from a fitted model."""
+    """Alpha, theta and aperiodic features from a fitted model.
+
+    A failed fit returns fit_ok=False and alpha_present=False, so that it is
+    counted as "no peak detected" in H1 and H2 (prereg section 4.5: poor fits
+    must not be quietly removed from the "absent" group). Failures are listed
+    in results/fit_failures.csv.
+    """
     if fm is None:
-        return {"fit_ok": False}
+        return {"fit_ok": False, "alpha_present": False, "n_alpha_peaks": 0,
+                "theta_present": False}
     ap = fm.aperiodic_params_
     out = {"fit_ok": True, "offset": ap[0], "exponent": ap[-1],
            "knee": ap[1] if len(ap) == 3 else np.nan,
@@ -115,83 +122,120 @@ def roi_spectrum(psd, ch_names, chans):
     return psd[idx].mean(axis=0)
 
 
-def process_one(args) -> dict | list:
-    pid, task, grid = args
+def raw_peak(freqs, spec, lo=7.0, hi=12.0) -> float:
+    """Tallest point of the raw spectrum in 7-12 Hz (the Vianney et al., 2025 approach)."""
+    m = (freqs >= lo) & (freqs <= hi)
+    return float(freqs[m][np.argmax(spec[m])])
+
+
+def load_psd(pid: str, task: str):
     z = np.load(C.DERIV / "psd" / f"{pid}_{task}.npz")
-    freqs, psd, names = z["freqs"], z["psd"].astype(float), list(z["ch_names"])
-    row = {"participant_id": pid, "task": task}
-    spec = roi_spectrum(psd, names, C.ROI_PRIMARY)
-    fm = fit_one(freqs, spec)
-    row.update(features(fm))
-    row["sg_present"], row["sg_iaf"] = sg_detect(freqs, spec)
-    row["raw_peak_7_12"] = float(freqs[(freqs >= 7) & (freqs <= 12)][np.argmax(spec[(freqs >= 7) & (freqs <= 12)])])
-    row["_fm_flat"] = None
-    grid_rows = []
-    if grid and task == "ec":
-        rois = {"O1O2": roi_spectrum(psd, names, C.ROI_PRIMARY),
-                "posterior4": roi_spectrum(psd, names, C.ROI_POSTERIOR4)}
-        post = [c for c in POSTERIOR if c in names]
-        for fr, mode, h in itertools.product(C.GRID["fit_range"], C.GRID["aperiodic_mode"],
-                                             C.GRID["min_peak_height"]):
-            base = {"participant_id": pid, "fit_range": f"{fr[0]:g}-{fr[1]:g}", "mode": mode,
-                    "min_peak_height": h}
-            for roi, s in rois.items():
-                if s is None:
-                    continue
-                g = features(fit_one(freqs, s, fr, mode, h))
-                grid_rows.append({**base, "roi": roi, **{k: g.get(k) for k in
-                                  ("fit_ok", "alpha_present", "iaf", "alpha_pw", "exponent", "r2")}})
-            # "any posterior channel": present if any single posterior channel has a peak
-            per = [features(fit_one(freqs, psd[names.index(c)], fr, mode, h)) for c in post]
-            per = [p for p in per if p.get("fit_ok")]
-            if per:
-                pres = [p for p in per if p["alpha_present"]]
-                top = max(pres, key=lambda p: p["alpha_pw"]) if pres else None
-                grid_rows.append({**base, "roi": "any_posterior", "fit_ok": True,
-                                  "alpha_present": bool(pres),
-                                  "iaf": top["iaf"] if top else np.nan,
-                                  "alpha_pw": top["alpha_pw"] if top else np.nan,
-                                  "exponent": float(np.mean([p["exponent"] for p in per])),
-                                  "r2": float(np.min([p["r2"] for p in per]))})
-    return row, grid_rows, (freqs, spec, fm.aperiodic_params_ if fm else None)
+    return z["freqs"], z["psd"].astype(float), [str(c) for c in z["ch_names"]]
+
+
+def grid_rows_for(pid: str, freqs, psd, names) -> list[dict]:
+    """All robustness-grid fits for one eyes-closed recording (R^2 floors are applied later)."""
+    rows = []
+    rois = {"O1O2": roi_spectrum(psd, names, C.ROI_PRIMARY),
+            "posterior4": roi_spectrum(psd, names, C.ROI_POSTERIOR4)}
+    post = [c for c in POSTERIOR if c in names]
+    cols = ("fit_ok", "alpha_present", "iaf", "alpha_pw", "exponent", "r2")
+    for fr, mode, h in itertools.product(C.GRID["fit_range"], C.GRID["aperiodic_mode"],
+                                         C.GRID["min_peak_height"]):
+        base = {"participant_id": pid, "fit_range": f"{fr[0]:g}-{fr[1]:g}", "mode": mode,
+                "min_peak_height": h}
+        for roi, s in rois.items():
+            if s is None:
+                continue
+            g = features(fit_one(freqs, s, fr, mode, h))
+            rows.append({**base, "roi": roi, **{k: g.get(k, np.nan) for k in cols}})
+        # "any posterior channel": present if any single posterior channel has a peak
+        per = [features(fit_one(freqs, psd[names.index(c)], fr, mode, h)) for c in post]
+        per = [p for p in per if p.get("fit_ok")]
+        if per:
+            pres = [p for p in per if p["alpha_present"]]
+            top = max(pres, key=lambda p: p["alpha_pw"]) if pres else None
+            rows.append({**base, "roi": "any_posterior", "fit_ok": True,
+                         "alpha_present": bool(pres),
+                         "iaf": top["iaf"] if top else np.nan,
+                         "alpha_pw": top["alpha_pw"] if top else np.nan,
+                         "exponent": float(np.mean([p["exponent"] for p in per])),
+                         "r2": float(np.min([p["r2"] for p in per]))})
+    return rows
+
+
+def process_participant(args) -> tuple[list[dict], list[dict]]:
+    """All primary features (and the grid) for one participant.
+
+    Returns (feature rows, one per task; grid rows). Errors are returned as rows
+    with fit_ok=False and an error message, and never stop the run.
+    """
+    pid, tasks, grid = args
+    rows, grid_rows, fits = [], [], {}
+    for task in tasks:
+        row = {"participant_id": pid, "task": task}
+        try:
+            freqs, psd, names = load_psd(pid, task)
+            spec = roi_spectrum(psd, names, C.ROI_PRIMARY)
+            if spec is None:
+                raise ValueError("O1 or O2 missing from the saved spectrum")
+            fm = fit_one(freqs, spec)
+            fits[task] = fm
+            row.update(features(fm))
+            row["sg_present"], row["sg_iaf"] = sg_detect(freqs, spec)
+            row["raw_peak_7_12"] = raw_peak(freqs, spec)
+            if grid and task == "ec":
+                grid_rows = grid_rows_for(pid, freqs, psd, names)
+        except Exception as exc:
+            row.update(features(None), error=str(exc))
+        rows.append(row)
+    # Reactivity: 1/f-removed power around the eyes-closed IAF, eyes closed minus eyes open,
+    # each condition fitted separately. No eyes-closed peak -> window centred on 10.5 Hz.
+    if fits.get("ec") is not None and fits.get("eo") is not None:
+        ec = rows[list(tasks).index("ec")]
+        centre = ec["iaf"] if ec["alpha_present"] else float(np.mean(C.ALPHA_BAND))
+        react = flat_power(fits["ec"], centre) - flat_power(fits["eo"], centre)
+        for r in rows:
+            r["reactivity_log10"] = react
+    return rows, grid_rows
+
+
+def run(jobs: int = 2, grid: bool = True) -> tuple[pd.DataFrame, pd.DataFrame]:
+    files = sorted((C.DERIV / "psd").glob("*.npz"))
+    by_pid: dict[str, list[str]] = {}
+    for f in files:
+        pid, task = f.stem.rsplit("_", 1)
+        by_pid.setdefault(pid, []).append(task)
+    jobs_list = [(pid, sorted(tasks), grid) for pid, tasks in sorted(by_pid.items())]
+    rows, grid_rows = [], []
+    if jobs == 1:
+        results = map(process_participant, jobs_list)
+    else:
+        pool = ProcessPoolExecutor(jobs)
+        results = pool.map(process_participant, jobs_list, chunksize=2)
+    for r, g in results:
+        rows.extend(r)
+        grid_rows.extend(g)
+    feats = pd.DataFrame(rows)
+    if "error" not in feats:
+        feats["error"] = np.nan
+    feats.to_csv(C.RESULTS / "features.csv", index=False)
+    grid_df = pd.DataFrame(grid_rows)
+    if grid:
+        grid_df.to_csv(C.RESULTS / "features_grid.csv", index=False)
+    feats.loc[~feats["fit_ok"].astype(bool), ["participant_id", "task", "error"]].to_csv(
+        C.RESULTS / "fit_failures.csv", index=False)
+    return feats, grid_df
 
 
 def main() -> None:
     from prereg_guard import require_prereg
     print("Pre-registration commit:", require_prereg())
     ap = argparse.ArgumentParser()
-    ap.add_argument("--jobs", type=int, default=6)
+    ap.add_argument("--jobs", type=int, default=2)
     ap.add_argument("--no-grid", action="store_true")
     args = ap.parse_args()
-
-    files = sorted((C.DERIV / "psd").glob("*.npz"))
-    jobs = [(f.stem.rsplit("_", 1)[0], f.stem.rsplit("_", 1)[1], not args.no_grid) for f in files]
-    rows, grid = [], []
-    with ProcessPoolExecutor(args.jobs) as pool:
-        for row, g, _ in pool.map(process_one, jobs, chunksize=2):
-            row.pop("_fm_flat", None)
-            rows.append(row)
-            grid.extend(g)
-    feats = pd.DataFrame(rows)
-
-    # Reactivity: 1/f-removed power around the eyes-closed IAF (7-14 Hz centre 10.5 if no EC peak)
-    react = []
-    for pid, g in feats.groupby("participant_id"):
-        if set(g["task"]) != {"ec", "eo"}:
-            continue
-        ec = g[g["task"] == "ec"].iloc[0]
-        centre = ec["iaf"] if ec["alpha_present"] else float(np.mean(C.ALPHA_BAND))
-        vals = {}
-        for task in ("ec", "eo"):
-            z = np.load(C.DERIV / "psd" / f"{pid}_{task}.npz")
-            spec = roi_spectrum(z["psd"].astype(float), list(z["ch_names"]), C.ROI_PRIMARY)
-            vals[task] = flat_power(fit_one(z["freqs"], spec), centre)
-        react.append({"participant_id": pid, "reactivity_log10": vals["ec"] - vals["eo"]})
-    feats = feats.merge(pd.DataFrame(react), on="participant_id", how="left")
-
-    feats.to_csv(C.RESULTS / "features.csv", index=False)
-    pd.DataFrame(grid).to_csv(C.RESULTS / "features_grid.csv", index=False)
-    feats.loc[~feats["fit_ok"], ["participant_id", "task"]].to_csv(C.RESULTS / "fit_failures.csv", index=False)
+    feats, _ = run(args.jobs, not args.no_grid)
     print(feats.groupby("task")[["fit_ok", "alpha_present", "sg_present"]].mean())
 
 
