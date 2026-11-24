@@ -235,10 +235,12 @@ def holm(res: pd.DataFrame) -> pd.DataFrame:
     one = res["test"].str[:2].isin(ONE_SIDED_025)
     res.loc[confirm, "p_family"] = np.where(one[confirm], np.minimum(1, 2 * res.loc[confirm, "p"]),
                                             res.loc[confirm, "p"])
+    # A confirmatory model that could not be fitted stays in the family with p = 1
+    # (not supported), so the family always has the pre-registered 11 tests.
+    res.loc[confirm & res["p_family"].isna(), "p_family"] = 1.0
     res["p_holm"] = np.nan
-    ok = confirm & res["p_family"].notna()
-    if ok.any():
-        res.loc[ok, "p_holm"] = multipletests(res.loc[ok, "p_family"], method="holm")[1]
+    if confirm.any():
+        res.loc[confirm, "p_holm"] = multipletests(res.loc[confirm, "p_family"], method="holm")[1]
     res["supported"] = res["supported_raw"]
     res.loc[confirm, "supported"] = res.loc[confirm, "supported_raw"] & (res.loc[confirm, "p_holm"] < cfg.ALPHA_LEVEL)
     return res

@@ -12,15 +12,16 @@ import os
 
 ROOT = Path(__file__).resolve().parents[1]
 # Simulation mode: if ALPHA_SIM_ROOT is set, every data, derivative, result and
-# figure path points inside that folder instead of this repository, so tests on
+# figure path points inside that folder (outside the repository, or under the
+# git-ignored data/sim/), so tests on
 # SIMULATED recordings (src/simulate.py, tests/) can never read or overwrite the
 # real data or the real results. The pre-registration guard is unchanged: the
 # main() of every spectral script still refuses to run until prereg.md is committed.
 SIM_ROOT = os.environ.get("ALPHA_SIM_ROOT")
 SIMULATION = bool(SIM_ROOT)
 BASE = Path(SIM_ROOT).resolve() if SIMULATION else ROOT
-if SIMULATION and (BASE == ROOT or ROOT in BASE.parents):
-    raise RuntimeError("ALPHA_SIM_ROOT must be outside the repository")
+if SIMULATION and (BASE == ROOT or ROOT in BASE.parents) and (ROOT / "data" / "sim") not in BASE.parents:
+    raise RuntimeError("ALPHA_SIM_ROOT must be outside the repository or inside data/sim/")
 DATA = BASE / "data" / "ds007358"          # git-ignored raw data
 DERIV = BASE / "data" / "derivatives"      # git-ignored intermediate files
 RESULTS = BASE / "results"                 # derived tables only (committed)
@@ -85,6 +86,12 @@ GRID = {
     "min_peak_height": [0.05, 0.1, 0.15, 0.2, 0.25, 0.3],
     "r2_floor": [0.90, 0.80, 0.0],
 }
+
+if SIMULATION and os.environ.get("ALPHA_SIM_SMALL_GRID"):
+    # Tests only: a 2 x 1 x 1 x 2 x 2 grid keeps the simulated end-to-end test fast.
+    # Ignored outside simulation mode, so the real analysis always uses the full grid.
+    GRID = {"roi": ["O1O2", "posterior4"], "fit_range": [(2.0, 40.0)], "aperiodic_mode": ["fixed"],
+            "min_peak_height": [0.1, 0.3], "r2_floor": [0.90, 0.0]}
 
 # ------------------------------------------------- statistics
 ALPHA_LEVEL = 0.05
