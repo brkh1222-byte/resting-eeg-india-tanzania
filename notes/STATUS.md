@@ -16,15 +16,18 @@ Last update: 2026-11-25, step 3 below in progress.
    - `models.py`: failed fits now count as "no peak" consistently; Holm-adjusted decision column; Firth logistic sensitivity rows; separation handling; descriptives table.
    - `robustness.py`: added the pre-registered no-quality sensitivity (section 8.6), leave-one-researcher-out ranges, time-domain null calibration.
 
+4. Helper agents finished: `notes/novelty.md` (no overlapping work found), `paper/references.bib` + `notes/citation_check.md` (27 references verified; claim checks).
+5. `src/simulate.py`, `tests/test_pipeline.py` (14 fast tests + 1 slow end-to-end test, all passing), `run_all.sh` (one command; stops at the gate today).
+6. `paper/main.tex`: introduction, data, methods written. Results sections pending.
+
 ## In progress
-- `src/simulate.py` (simulated recordings with known truth) and `tests/`.
-- Two helper agents: novelty search -> `notes/novelty.md`; citation check -> `paper/references.bib`, `notes/citation_check.md`.
+- Simulation experiments A-J running detached: `nohup nice .venv/bin/python -W ignore src/simulate.py experiments --out results/simulation --n 40` (log: `results/simulation/run.log`). Re-running the same command resumes: finished experiments (`exp_X.csv`) are skipped.
+- `notes/prereg_review.md`: parts B and C written; parts A and D wait for the simulation numbers (placeholders `%%PART_A%%`, `%%PART_D%%`).
 
 ## To do
-- Simulation validation run and report (`notes/simulation_validation.md`).
-- `notes/prereg_review.md`.
-- `paper/main.tex`.
-- `run_all.sh` one-command runner.
+- `notes/simulation_validation.md` from `results/simulation/summary.csv`; simulation figures (`src/figures_sim.py`).
+- Larger simulated cohort run (`src/simulate.py cohort --root data/sim/cohort`).
+- Fill simulation results, placeholders and discussion in `paper/main.tex`; fill `paper/notes.md`.
 
 ## How to resume
-Read this file, then `git log --oneline`. Long jobs write to the scratch simulation folder named in `notes/simulation_validation.md` and are resumable.
+Read this file, then `git log --oneline`. Check `ls results/simulation` to see which experiments are done.
