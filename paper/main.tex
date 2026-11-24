@@ -1,0 +1,356 @@
+% Draft manuscript. Written by an AI assistant (Claude) for the researcher to edit.
+% Real-data results are PLACEHOLDERS until the pre-registration is approved and the
+% gated pipeline has run. Every number in this file is listed with its source in
+% paper/notes.md. Compile: pdflatex main && bibtex main && pdflatex main && pdflatex main
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage[round,authoryear]{natbib}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+
+% Placeholder for anything that needs the real data or a decision by the researcher.
+\newcommand{\TBD}[1]{\textcolor{red}{[TBD: #1]}}
+
+\title{Is alpha really missing? A pre-registered spectral parameterization of resting EEG
+in adults from India and Tanzania, with a simulation test of the detection method}
+\author{[AUTHORS --- TBD]}
+\date{Draft of 25 November 2026. Real-data results are not yet computed.}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+The alpha rhythm is usually treated as a universal feature of the resting human
+electroencephalogram (EEG), yet a 2017 preprint reported that it is ``largely undetected''
+in Indian adults without post-primary education or access to modern technologies. That
+study did not model the aperiodic ($1/f$-like) background of the spectrum, which can make
+a peak look weak or absent. We reanalyse an open dataset of resting EEG from 1,000
+participants in India and 1,000 in Tanzania (OpenNeuro ds007358) with spectral
+parameterization (specparam). The analysis plan was written before any spectrum of the
+real recordings was computed. Before running it, we tested the full pipeline on simulated
+recordings with known ground truth at the headset's 128~Hz sampling rate.
+\textbf{Simulation results:} \TBD{two sentences, filled from Section~\ref{sec:simresults}}.
+\textbf{Real-data results:} \TBD{presence rate per site with 95\% CI (H1); quality and
+income as predictors of a missing peak (H2); age slopes of alpha frequency, aperiodic
+exponent and alpha power (H3--H5); one sentence on meaning}. Differences between the two
+sites are described as differences in environment, recording context and data quality,
+not as traits of any population.
+\end{abstract}
+
+% ---------------------------------------------------------------------------
+\section{Introduction}
+
+The alpha rhythm, an oscillation of about 8--12~Hz that is strongest over posterior scalp
+when the eyes are closed, is the most prominent feature of the resting human EEG
+\citep{klimesch1999}. Two of its properties change across adulthood. The individual alpha
+frequency (IAF) slows in older age \citep{klimesch1999,cesnaite2023,merkin2023}. The
+aperiodic background of the spectrum, which falls off roughly as $1/f^{\chi}$, becomes
+flatter: the exponent $\chi$ is lower in older than in younger adults
+\citep{voytek2015,donoghue2020}.
+
+Almost all of this knowledge comes from samples in Western, educated, industrialised, rich
+and democratic societies, which are a narrow and unusual slice of humanity
+\citep{henrich2010}. Multinational EEG norms exist \citep{li2022}, but they pool sites that
+used different recording systems, so differences between countries cannot be separated
+from differences between devices.
+
+Against this background, \citet{parameshwaran2017} reported a striking result from 402
+adults in 48 settlements in Tamil Nadu, India, recorded with a 14-channel Emotiv EPOC
+headset. Alpha was ``largely undetected in the EEG of adults without post-primary
+education and access to modern technologies''. In their data, 20\% of participants showed
+no oscillation in any channel, and only 40\% of the ``pre-modern and transitioning''
+groups had alpha energy above the noise level, against 93.3\% of the ``modern'' group. The
+authors themselves described ``a very broad continuum rather than an absolute absence''.
+The preprint has not appeared in a journal. A later study of 1,199 adults in rural
+Haryana, India, with the same headset model found an alpha peak in 71.3\% of eyes-closed
+recordings \citep{bhavnani2022}. By comparison, an automated method found a peak
+frequency in 61 of 63 healthy adults (97\%)
+\citep{corcoran2018}.
+
+These studies share a limitation. None of them fitted a model of the aperiodic background.
+\citet{parameshwaran2017} located peaks with the second derivative of the power spectrum,
+and \citet{bhavnani2022} describe the peak only as activity ``above the background
+envelope'' of the spectrum. This matters because the height of a spectral peak is measured
+against its background. If the background is steeper, flatter or noisier in one group of
+recordings than in another (because of age, electrode contact, movement or line noise),
+the same oscillation can look strong, weak or absent
+\citep{donoghue2020,donoghue2022,gerster2022}. In European samples, much of the apparent
+decline of alpha \emph{power} with age is explained by the change in the aperiodic
+background. After adjusting for it, \citet{merkin2023} and \citet{cesnaite2023} found no
+reliable age difference in alpha power, while \citet{trondle2023} found that the age
+effect was overestimated by conventional analyses but did not vanish. A claim that alpha
+is weak or missing in some group therefore needs an explicit model of the background, and
+a check that ``missing'' does not simply follow recording quality.
+
+A new open dataset makes this test possible. \citet{vianney2025} describe a field
+programme that recorded resting EEG from 7,933 people in India and Tanzania with one
+headset model and one protocol, operated by trained non-specialist field researchers. A
+subset of 2,000 participants, 1,000 per country, is public \citep{openneuro_ds007358}.
+\citet{vianney2025} focus on data quality. They also report that the frequency of the
+largest spectral value in 7--12~Hz falls with age in both countries, but this measure
+takes the maximum in a band and does not test whether a peak exists.
+
+Here we apply spectral parameterization \citep[specparam;][]{donoghue2020} to the
+eyes-closed and eyes-open recordings of the adults in this dataset. We ask two questions.
+First, once the aperiodic background is modelled, how often is an eyes-closed occipital
+alpha peak present, and where it is not detected, is this better explained by recording
+quality than by income? Second, within each country, how do IAF, alpha power above the
+background and the aperiodic exponent vary with age? Our hypotheses (H1--H5 and a validity
+check V1; Table~\ref{tab:hyp}) were fixed in a pre-registration before any spectrum of the
+real recordings was computed.
+
+A detection method can only answer the first question if its own error rates are known. A
+peak-finding algorithm applied to a noisy spectrum will sometimes report a peak where
+there is none, and miss one that is there, and both errors depend on how long the
+recording is and on the settings used. We therefore begin with a simulation study: we
+generate recordings with a known aperiodic background and a known alpha peak (or none), at
+the headset's sampling rate and at the recording lengths in the dataset, and pass them
+through exactly the code used for the real data. The simulation results are reported in
+full in this draft (Section~\ref{sec:simresults}). The real-data results are marked as
+placeholders.
+
+All comparisons between India and Tanzania in this paper are descriptive. The two sites
+differ in electrode layouts, field teams, settings and age mix. Differences between them
+are differences in environment, recording context and data quality, and we do not
+interpret them as traits of any population.
+
+% ---------------------------------------------------------------------------
+\section{Data}
+
+\subsection{Dataset}
+
+We use OpenNeuro dataset ds007358, version 1.0.0, released on 4 February 2026 under a CC0
+licence \citep{openneuro_ds007358}. It holds recordings from 2,000 participants, 1,000 in
+India and 1,000 in Tanzania, in three conditions: eyes closed, eyes open, and a Raven's
+matrices task. We use the first two. The participant table gives the site, an age group
+(the exact age is not released), an income bin, a mental-health score and sex. There is no
+education variable. How the 2,000 were drawn from the full cohort is not documented.
+
+According to \citet{vianney2025}, recordings were made with the wireless Emotiv FLEX~2 Gel
+headset, using 16 of its 32 electrode positions and an ear-clip reference, for 3~minutes
+with eyes closed and 3~minutes with eyes open. Twelve field researchers were recruited in
+each country, were new to EEG, and received two weeks of training. All participants gave
+written informed consent, and the original study was approved by ethics committees in
+India and Tanzania \citep{vianney2025}. The present work is a secondary analysis of
+de-identified public data.
+
+The public files differ from that description in two ways that matter for analysis.
+First, the files are sampled at 128~Hz (256~Hz for 7 Indian participants), whereas the
+paper states 256~Hz. Second, electrode layouts vary. Among the 1,000 Indian participants
+there are 10 distinct layouts, although 981 share one 14-channel layout (AF3, AF4, F3, F4,
+F7, F8, FC5, FC6, T7, T8, P7, P8, O1, O2). Among the 1,000 Tanzanian participants there are
+136 layouts with 8 to 18 electrodes. The only posterior pair present in nearly all
+recordings is O1 and O2, so this pair is our primary region. Each file also contains the
+headset's own per-electrode contact-quality (CQ) and signal-quality (EQ) channels and a
+flag for interpolated samples, which we use to measure recording quality.
+
+\subsection{Participants and exclusions}
+
+Table~\ref{tab:flow} shows the participant flow. We include adults (age groups 18--20 to
+85+) whose eyes-closed recording contains both O1 and O2 and keeps at least 60~s of clean
+data after epoch rejection (Section~\ref{sec:preproc}). All 225 participants under 18 are
+Indian and are excluded from confirmatory analyses, as are participants without an age
+group. This leaves 680 usable eyes-closed recordings in India and 786 in Tanzania. Of the
+60 analysable adults excluded for too little clean data, 17 had no clean epoch at all,
+because flagged samples were spread through the whole recording. The exclusion counts were
+computed from time-domain quality measures only, before any spectrum existed.
+
+\begin{table}[ht]
+\centering
+\caption{Participant flow. Source: \texttt{results/participants\_clean.csv} and
+\texttt{results/qc\_summary.csv}. The last row is a placeholder until the fits exist.}
+\label{tab:flow}
+\begin{tabular}{lrr}
+\toprule
+ & India & Tanzania \\
+\midrule
+Participants in the dataset & 1,000 & 1,000 \\
+Adults with a known age group & 700 & 990 \\
+\quad with O1 and O2 in the eyes-closed recording & 694 & 832 \\
+\quad with $\geq$ 60~s of clean eyes-closed data (usable) & 680 & 786 \\
+Usable eyes-open recording as well (for V1) & 670 & 752 \\
+Model fit $R^2 \geq 0.90$ (for H3--H5) & \TBD{n} & \TBD{n} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The usable Indian sample is younger than the Tanzanian one: 305 of 680 Indian participants
+(45\%) are aged 18--24, against 151 of 786 (19\%) in Tanzania, and only one Indian
+participant is 65 or older, against 62 in Tanzania. Income is analysed in India only. In
+Tanzania it is missing or in the lowest bin for almost all participants. Among the 680
+usable Indian participants, income is missing for 22, and 436 of the remaining 658 fall in
+the two lowest of the seven bins.
+
+% ---------------------------------------------------------------------------
+\section{Methods}
+
+\subsection{Pre-registration and the order of work}
+
+The hypotheses, exclusion rules, settings and models were written down in
+\texttt{preregistration/prereg.md} in the project's public repository before any power
+spectrum or model fit of the real recordings was computed. The scripts that compute
+spectra check that this file is committed and refuse to run otherwise. \TBD{commit hash
+and date of the pre-registration; list of amendments, if any}. Before the pre-registration
+was fixed we had seen the participant table, the channel lists, and time-domain quality
+measures for every recording (length, share of epochs kept, CQ and EQ, share of
+interpolated samples, blink rate). We had also run the simulation study reported in
+Section~\ref{sec:simresults}, which uses no real data. \TBD{state here which changes to
+the draft pre-registration were made in response to the simulation results}.
+
+\begin{table}[ht]
+\centering
+\caption{Pre-registered hypotheses and decision rules. All models are fitted separately
+for each site. \TBD{update this table to the final committed pre-registration}.}
+\label{tab:hyp}
+\begin{tabular}{p{0.07\linewidth}p{0.45\linewidth}p{0.38\linewidth}}
+\toprule
+ & Hypothesis & Decision rule \\
+\midrule
+H1 & An eyes-closed alpha peak is present in more than 80\% of usable recordings &
+Wilson 95\% CI lower bound $> 0.80$ \\
+H2a & Better recording quality predicts fewer missing peaks & Logistic regression, odds
+ratio $< 1$, $p < .05$ \\
+H2b & In India, income has no meaningful association with a missing peak once quality is
+controlled & 90\% CI of the odds ratio per SD of income rank within 0.80--1.25 \\
+H3 & IAF decreases with age & Slope $< 0$, one-sided $p < .025$ \\
+H4 & The aperiodic exponent decreases with age & Slope $< 0$, one-sided $p < .025$ \\
+H5 & Alpha power above the background shows no meaningful change with age & 90\% CI of the
+standardised slope within $\pm 0.10$ SD per decade \\
+V1 & Alpha is stronger with eyes closed than with eyes open (validity check) & Share of
+participants with a positive difference; Wilson 95\% CI lower bound $> 0.80$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Preprocessing and recording quality}
+\label{sec:preproc}
+
+Recordings were processed with MNE-Python 1.10.1 \citep{gramfort2013} at their native
+sampling rate. We kept the EEG electrodes and stored the headset's quality channels
+separately. Signals were band-pass filtered at 1--45~Hz (zero-phase FIR) and cut into 4~s
+epochs with 50\% overlap, which gives a frequency resolution of 0.25~Hz. An epoch was
+rejected if it contained any sample that the headset flagged as interpolated or saturated,
+or if its log-variance at O1 or O2 was more than 3 robust standard deviations above that
+person's median. We use a rule relative to each person because the absolute voltages of a
+consumer headset are not calibrated. A recording was usable if O1 and O2 were present and
+not flat (SD of at least 1~$\mu$V) and at least 60~s were covered by accepted epochs.
+
+In usable eyes-closed recordings the median amount of clean data was 176~s in India and
+166~s in Tanzania, and the median share of epochs kept was 0.85 in both. Contact quality
+at O1 and O2 was at its maximum throughout the recording in 89\% (India) and 96\%
+(Tanzania) of them.
+
+For each recording we computed five quality measures: mean EQ and mean CQ at O1 and O2,
+the share of epochs kept, the share of interpolated samples, and a 50~Hz line-noise ratio
+(power at 48--52~Hz divided by power at 40--45~Hz in the unfiltered signal). The quality
+composite is the first principal component of these five measures after standardisation,
+computed within each site and signed so that higher values mean better quality.
+
+\subsection{Spectra}
+
+For each accepted epoch we computed a Hann-windowed periodogram and took the median across
+epochs at each frequency, a variant of Welch's method \citep{welch1967} that resists
+leftover artefacts. The primary spectrum is the mean of the O1 and O2 spectra. The median
+is not rescaled to the mean, so the aperiodic offset is about 0.16 $\log_{10}$ units lower
+than with a mean-based estimate. This does not affect the exponent or peak heights.
+
+\subsection{Spectral parameterization and outcome measures}
+
+We fitted each spectrum with specparam \citep{donoghue2020}, using the \texttt{fooof}
+1.1.1 implementation, over 2--40~Hz. The model describes $\log_{10}$ power as an aperiodic
+line, $b - \chi \log_{10} f$ with offset $b$ and exponent $\chi$ (``fixed'' mode), plus up
+to six Gaussian peaks. Peak widths were limited to 1--8~Hz, the minimum peak height was 0.1
+$\log_{10}$ units above the aperiodic fit, and the peak threshold was 2 standard deviations.
+The same settings were used for every recording, so that exponents are comparable.
+\TBD{replace these settings with those of the final pre-registration if they change}.
+
+Outcome measures were defined as follows. Alpha is \emph{present} if at least one fitted
+peak has a centre frequency of 7--14~Hz. IAF, alpha power and alpha bandwidth are the
+centre frequency, the height above the aperiodic fit, and the width of the tallest such
+peak. The exponent and offset come from the aperiodic fit. Fit quality is the $R^2$ between
+the model and the spectrum. A recording whose fit fails is counted as having no peak.
+Alpha reactivity is the mean of the spectrum minus its aperiodic fit within IAF $\pm$ 2~Hz,
+eyes closed minus eyes open, with each condition fitted separately and the window centred
+on the eyes-closed IAF, or on 10.5~Hz if there is no eyes-closed peak.
+
+As a second opinion on presence we used a simpler detector adapted from the approach of
+\citet{corcoran2018}: the $\log_{10}$ spectrum is smoothed with a Savitzky--Golay filter
+\citep{savitzky1964} (11 bins, order 5), and a local maximum in 7--14~Hz counts as a peak if
+it rises above a straight-line fit of log power on log frequency by more than both 0.05
+$\log_{10}$ units and twice the standard deviation of the residuals outside the alpha
+window. This is our own implementation and not the published toolbox.
+
+\subsection{Statistical models}
+
+All models were fitted separately for each site with statsmodels 0.14.5
+\citep{seabold2010}. Age enters as the midpoint of the age group in decades. Covariates are
+sex, the quality composite, the field-researcher group as a fixed effect, and, in
+Tanzania, the electrode-layout family. The field-researcher group is the letter prefix of
+the participant identifier; that this prefix identifies the researcher is our assumption
+and is not documented \TBD{update if the data owners confirm or correct this}.
+
+H1 uses the proportion of usable recordings with a peak, with a Wilson confidence interval
+\citep{wilson1927}. H2 uses logistic regression of a missing peak on the quality composite
+and covariates, with income rank added in India. H3 to H5 use ordinary least squares with
+heteroscedasticity-consistent (HC3) standard errors \citep{long2000}, on recordings with
+$R^2 \geq 0.90$ (and, for IAF and alpha power, a detected peak). H1, H2 and V1 use all
+usable recordings whatever the fit quality, so that poor fits cannot be removed from the
+``absent'' group. The two ``no meaningful effect'' hypotheses (H2b, H5) are tested with two
+one-sided tests for equivalence \citep{lakens2017}. The eleven confirmatory tests (H1, H2a,
+H3, H4 and H5 in each site, and H2b in India) are corrected with Holm's method
+\citep{holm1979}.
+
+\subsection{Robustness analyses}
+
+We report (i) a specification curve \citep{simonsohn2020} over 324 versions of the analysis
+per site (three regions, three fit ranges, two aperiodic modes, six minimum peak heights
+and three $R^2$ floors); (ii) refits leaving out each field-researcher group in turn;
+(iii) the raw 7--12~Hz maximum used by \citet{vianney2025} next to the specparam IAF;
+(iv) agreement between specparam and the second detector (Cohen's $\kappa$); (v) a null
+calibration, in which aperiodic-only recordings matched to each site's fitted exponents,
+offsets and recording lengths are simulated and the share with a ``detected'' peak is
+reported; (vi) the models without the quality covariate; and (vii) the analysis without
+the seven recordings sampled at 256~Hz.
+
+\subsection{Simulation study}
+\label{sec:simmethods}
+
+To measure the error rates of the detection method we simulated recordings with a known
+spectrum. Each simulated recording is a stationary Gaussian time series sampled at 128~Hz
+whose power spectrum follows the model that specparam assumes:
+\begin{equation}
+\log_{10} P(f) = b - \chi \log_{10} f + h \exp\!\left(-\frac{(f - f_\alpha)^2}{2 s^2}\right),
+\end{equation}
+with offset $b$, exponent $\chi$, and an alpha peak of height $h$ (in $\log_{10}$ units
+above the background), centre $f_\alpha$ and width $s$. Setting $h = 0$ gives a recording
+with no alpha. Two channels, standing for O1 and O2, share 70\% of their variance. Each
+simulated recording then passes through the same functions as the real data: the 1--45~Hz
+filter, epoching and rejection, the median periodogram, and the specparam fit with the
+primary settings. Because the truth is known, we can count how often a peak is reported
+when none exists (a false ``present''), how often a true peak is missed (a false
+``absent''), and how accurately IAF, the exponent and peak height are recovered.
+
+\TBD{The description of the experiments below is filled in together with
+Section~\ref{sec:simresults}.}
+
+%%SIMMETHODS%%
+
+% ---------------------------------------------------------------------------
+\section{Results}
+
+%%SIMRESULTS%%
+
+%%REALRESULTS%%
+
+%%DISCUSSION%%
+
+\bibliographystyle{apalike}
+\bibliography{references}
+
+\end{document}
