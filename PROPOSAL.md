@@ -1,6 +1,6 @@
 # Research Proposal
 
-## Is Alpha Really Missing? Periodic and Aperiodic Resting EEG Across Age and Income in 2,000 Adults from India and Tanzania Recorded on Identical Hardware
+## Is Alpha Really Missing? Periodic and Aperiodic Resting EEG Across Age and Income in Adults from India and Tanzania Recorded with the Same Headset Model and Protocol
 
 **Author:** Berkh (independent student researcher)
 **Adult mentor / senior author:** [to be confirmed; needed for JEI and any OSF/PsyArXiv submission]
@@ -12,14 +12,14 @@
 
 ## 1. Summary
 
-The **alpha rhythm** (≈8–12 Hz, strongest with eyes closed) is the most prominent signal in human resting EEG. It is usually described as universal. Yet a research group has claimed that alpha is "largely undetected" in Indian adults without post-primary education or exposure to modern technology (Parameshwaran & Thiagarajan, bioRxiv 10.1101/125898). If that is true, a textbook "universal" brain rhythm would depend on lifestyle.
+The **alpha rhythm** (≈8–12 Hz, strongest with eyes closed) is the most prominent signal in human resting EEG. It is usually described as universal. Yet a 2017 preprint reported that alpha is "largely undetected" in Indian adults without post-primary education or access to modern technologies (Parameshwaran & Thiagarajan, 2017, bioRxiv 10.1101/125898). In practice the claim is about **weak or undetected** alpha: in the least "modern" groups about 20% showed no peak in any channel and only about 40% had alpha energy above a noise threshold, and the authors describe a broad continuum. If true, a textbook "universal" rhythm would depend on lifestyle.
 
-That claim rested on 402 participants from one country, on older hardware, using raw spectral power. Raw power mixes true oscillations with the broadband **1/f ("aperiodic") background**. Differences in that background, from age, hardware contact or noise, can make an alpha peak look absent even when it is not.
+That claim rested on 402 adults in Tamil Nadu, recorded with a 14-channel Emotiv EPOC. Alpha was found with a second-derivative method that tries to lift peaks above the background, but the **1/f ("aperiodic") background** was never modelled and its exponent never estimated. Differences in that background, from age, electrode contact or noise, can make an alpha peak look weak or absent even when it is not.
 
-A new open dataset (OpenNeuro **ds007358**, CC0, released Feb 2026) contains **1,000 adults from India and 1,000 from Tanzania**. All were recorded with the **same headset and protocol** (eyes closed, eyes open, Raven's matrices task). This project separates periodic and aperiodic components with **specparam (FOOOF)** and tests:
-1. whether alpha is present or absent once the background is modelled;
-2. how alpha frequency, alpha power and the aperiodic exponent change with age in two countries;
-3. whether income is associated with any of these within each country.
+A new open dataset (OpenNeuro **ds007358**, CC0, released Feb 2026) contains **1,000 participants from India and 1,000 from Tanzania** (225 of the Indian participants are under 18). All were recorded with the **same headset model and protocol** (eyes closed, eyes open, Raven's matrices task), but electrode montages differ: one layout in India, 136 in Tanzania. About 1,500 adults have usable occipital channels. This project separates periodic and aperiodic components with **specparam (FOOOF)** and tests, within each country:
+1. how often an alpha peak is present once the background is modelled, and whether missing peaks track data quality or income;
+2. how alpha frequency, alpha power above the background and the aperiodic exponent change with age;
+3. whether income (India only) is associated with alpha once data quality is controlled.
 
 ## 2. Background
 
@@ -31,55 +31,60 @@ A new open dataset (OpenNeuro **ds007358**, CC0, released Feb 2026) contains **1
 
 | Work | What it did | Gap |
 |---|---|---|
-| Vianney et al. 2025, *eNeuro*, doi:10.1523/ENEURO.0006-25.2025 | Source paper for the dataset. Data-quality focus; one raw alpha-peak-by-age plot (India 9.5→8.6 Hz, Tanzania 9.6→9.0 Hz) | Simple 7–12 Hz peak pick; no 1/f separation; no statistical modelling |
-| Parameshwaran & Thiagarajan, bioRxiv 10.1101/125898 | "Alpha largely undetected" in less-educated or low-technology adults (India, n = 402, Emotiv EPOC) | One country, older device, raw power |
-| Parameshwaran & Thiagarajan 2021, *Sci Rep*, doi:10.1038/s41598-021-85236-z | EEG complexity vs income and stimulus exposure (India) | One country |
+| Vianney et al. 2025, *eNeuro*, doi:10.1523/ENEURO.0006-25.2025 | Source paper for the dataset. Data-quality focus; raw alpha peak frequency by age (India 9.5→8.6 Hz, Tanzania 9.6→9.0 Hz). **Partial overlap: we extend, not replace, this age result** | Simple 7–12 Hz peak pick; no 1/f separation; no presence test; no statistical modelling |
+| Parameshwaran & Thiagarajan 2017, bioRxiv 10.1101/125898 | Weak or undetected alpha in less "modern" adults (Tamil Nadu, n = 402, Emotiv EPOC); never published in a journal | One country; second-derivative method, no fitted 1/f model; no exponent |
+| Parameshwaran, Sathishkumar & Thiagarajan 2021, *Sci Rep*, doi:10.1038/s41598-021-85236-z | Same 402 people: complexity and spectral "energy" rise with income and stimulus exposure | One country; no 1/f fit |
+| Bhavnani et al. 2022, *Front Hum Neurosci*, doi:10.3389/fnhum.2022.802764 | 1,199 rural adults in Haryana: alpha peak in 71.3% of eyes-closed recordings | No 1/f fit |
 | HarMNqEEG, Li et al. 2022, *NeuroImage*, doi:10.1016/j.neuroimage.2022.119190 | Nine countries, cross-spectra | 12 different devices; only cross-spectra shared |
 
-**Gap:** No study has reanalysed ds007358. No study has tested the "alpha absent" claim with periodic/aperiodic separation, across two countries, on identical hardware. (Literature search, Nov 2026.)
+**Gap:** No published study or preprint has run spectral parameterization on ds007358 or any Sapien Labs India/Tanzania EEG, tested the "weak alpha" claim with a fitted 1/f model, or reported aperiodic-exponent age trends in Indian or East African adults. (Search of OpenNeuro, bioRxiv/medRxiv, Europe PMC, OpenAlex and Semantic Scholar citation lists, Nov 2026; full record in the research-plan doc.)
 
 ## 4. Hypotheses (to be pre-registered before analysis)
 
-- **H1 (alpha presence):** after specparam modelling, a detectable alpha peak (8–13 Hz, eyes closed) will be present in a **large majority (>80%)** of usable recordings in *both* countries. This contradicts the "alpha absent" claim.
-- **H2 (age):** alpha peak frequency will decline with age group in both countries. A site × age interaction will be tested, with no predicted direction.
-- **H3 (aperiodic):** the aperiodic exponent will decrease (flatten) with age in both countries, replicating Western findings outside WEIRD samples.
-- **H4 (income, exploratory):** within each country, income will show at most small associations with alpha presence or power once data quality is controlled.
-- **H5 (reactivity):** alpha reactivity, defined as eyes-closed divided by eyes-open alpha power, will be > 1 in the large majority of participants in both countries.
+Full wording and decision rules: `preregistration/prereg.md`. All models are fitted within each country.
+
+- **H1 (presence):** an eyes-closed occipital alpha peak (7–14 Hz, ≥ 0.1 log10 above the 1/f fit) is present in **> 80%** of usable recordings in each country (95% CI lower bound > 80%). The bar sits between 71% in rural Indian adults without 1/f modelling (Bhavnani et al., 2022) and 97% in Western adults (Corcoran et al., 2018).
+- **H2 (measurement vs income):** missing peaks are predicted by data quality in each country (H2a). In India, income has no meaningful association once quality is controlled: odds ratio within 0.80–1.25 by equivalence test (H2b).
+- **H3 (IAF and age):** individual alpha frequency falls with age in each country.
+- **H4 (exponent and age):** the aperiodic exponent falls (flattens) with age in each country, replicating Western findings outside WEIRD samples.
+- **H5 (alpha power and age):** alpha power *above the background* shows no meaningful age change (equivalence within ±0.10 SD per decade), as found in European samples (Merkin et al., 2023; Cesnaite et al., 2023).
+- **V1 (validity check):** alpha is stronger eyes-closed than eyes-open in > 80% of participants.
+
+Between-country differences are exploratory and descriptive only, because montage, operators, setting and age mix differ between sites.
 
 ## 5. Data
 
 | Item | Details |
 |---|---|
-| Dataset | OpenNeuro **ds007358**, "A subset of large-scale EEG dataset (India + Tanzania)", v1.0.0 (2026-02-04), **CC0**, 17.3 GB |
-| Participants | 1,000 India + 1,000 Tanzania. Variables: `site`, `age_group` (`age` mostly n/a), `income_usd` (bins), `mhq_score`, `sex` |
-| Recordings | ~3 min each: eyes closed, eyes open, Raven's matrices task. EDF, **128 Hz** |
-| Hardware | Emotiv FLEX 2 (16 channels used, ear-clip reference), the same in both countries |
-| Note | Subject-ID prefixes appear to encode the field researcher or site, and will be used as a random effect |
+| Dataset | OpenNeuro **ds007358**, "A subset of large-scale EEG dataset (India + Tanzania)", v1.0.0 (2026-02-04), **CC0**, 17.3 GB, doi:10.18112/openneuro.ds007358.v1.0.0 |
+| Participants | 1,000 India + 1,000 Tanzania. 225 Indian participants are under 18; Tanzania is 18+. Variables: `site`, `age_group` (bins only; `age` is n/a for everyone), `income_usd` (bins differ by country), `mhq_score`, `sex`. **No education variable** |
+| Analysable adults | Adults with a known age group and both O1 and O2: India 694, Tanzania 832 (before quality control) |
+| Income | India: 7 bins, missing for 22 analysable adults. Tanzania: 431 of 832 in "<1000", 349 missing, so income is analysed in India only |
+| Recordings | ~3 min each: eyes closed (`ec`), eyes open (`eo`), Raven's matrices task (`pc`). EDF, **128 Hz** |
+| Hardware | Emotiv FLEX 2 Gel per Vianney et al., ear-clip reference. **Montages differ:** India one 14-channel layout; Tanzania 136 layouts with 8–18 channels, 83 recordings with no posterior channel |
+| Quality channels | Per-electrode Emotiv contact quality (CQ_) and signal quality (EQ_) in every file, used as data-quality covariates |
+| Selection | How the 2,000 were drawn from the 7,933-person cohort is not documented; to ask the data owners |
+| Note | Subject-ID prefixes appear to encode the field researcher (9 clusters in India, 13 in Tanzania); this is an assumption to confirm with the data owners |
 
 Download: `openneuro-py` or `datalad`, or the AWS S3 bucket `s3://openneuro.org/ds007358`.
 
 ## 6. Method
 
-1. **Preprocessing (MNE-Python):**
-   - Drop non-EEG channels (COUNTER, INTERPOLATED, timestamps).
-   - Filter 1–40 Hz and split into 2 s epochs.
-   - Reject epochs by amplitude/variance thresholds (or autoreject) and mark bad channels.
-   - Keep participants with ≥60 s of clean eyes-closed data.
-   - Record data-quality metrics as covariates.
-2. **Spectra:** Welch PSD per channel; average over posterior channels (O1, O2, P7, P8) and over all channels.
-3. **specparam:** fit 1–40 Hz in "knee" and "fixed" modes; choose the mode by fit statistics. Extract per participant:
-   - alpha peak present/absent;
-   - individual alpha frequency (IAF);
-   - alpha power above the aperiodic background;
-   - aperiodic exponent and offset;
-   - theta peak.
+Exact settings live in `src/config.py` and `preregistration/prereg.md`.
 
-   Also report goodness of fit (R², error) for every fit.
-4. **Statistics (statsmodels / pymer4):**
-   - Model: `feature ~ age_group * site + sex + income_within_site + quality + (1 | field_researcher)`.
-   - Logistic GLMM for alpha presence.
-   - Report effect sizes with confidence intervals; correct multiple comparisons (FDR).
-5. **Robustness:** different channel sets, frequency ranges, specparam settings, stricter quality thresholds, and a "raw peak-pick" comparison that reproduces Vianney et al.'s approach.
+1. **Preprocessing (MNE-Python):**
+   - Keep EEG channels; store the CQ_/EQ_ quality channels separately; drop timestamps, counters and markers.
+   - Band-pass 1–45 Hz; cut **4 s epochs with 50% overlap** (0.25 Hz resolution for IAF).
+   - Reject epochs with Emotiv interpolated/saturated samples or with outlier variance on O1/O2 (within-person robust z > 3).
+   - Keep adults with O1 and O2 and ≥ 60 s of clean eyes-closed data.
+   - Quality metrics: EQ/CQ at O1/O2, share of epochs kept, interpolated share, 50 Hz line-noise ratio, frontal blink rate. Quality composite = first principal component, within site.
+2. **Spectra:** median-Welch PSD per channel; **primary region O1 + O2** (the only posterior pair present in nearly everyone).
+3. **specparam:** one primary setting for everyone: fixed aperiodic mode, 2–40 Hz, peak widths 1–8 Hz, up to 6 peaks, minimum height 0.1 log10. No per-person mode selection, so exponents stay comparable. Extract alpha presence (peak in 7–14 Hz), IAF, alpha power above the 1/f fit, exponent, offset, theta peak, R² and error. A Savitzky-Golay detector adapted from restingIAF (Corcoran et al., 2018) is a second opinion on presence.
+4. **Statistics (statsmodels):**
+   - Within each site: logistic regression for a missing peak; OLS with HC3 errors for IAF, exponent and alpha power.
+   - Covariates: age (bin midpoint, per decade), sex, quality composite, field researcher as a **fixed effect** (too few clusters for random effects), montage family in Tanzania; income rank in India.
+   - Equivalence tests (TOST) for the "no meaningful effect" hypotheses; **Holm correction** across the 11 confirmatory tests.
+5. **Robustness:** a 324-version **specification curve** (region × fit range × aperiodic mode × peak threshold × R² floor), leave-one-researcher-out, the raw 7–12 Hz peak pick that reproduces Vianney et al., second-detector agreement, and a null calibration of specparam's false-positive rate on simulated aperiodic-only spectra.
 6. **Pre-registration:** commit `preregistration/prereg.md` (hypotheses, exclusions, models) to this public repo **before** computing any outcome statistics. The git timestamp on GitHub is the public record. (OSF requires users to be 18+; the adult mentor can mirror it there.)
 
 **Compute:** laptop-scale (17 GB, CPU). No GPU needed.
@@ -111,16 +116,29 @@ Download: `openneuro-py` or `datalad`, or the AWS S3 bucket `s3://openneuro.org/
 | 128 Hz and consumer hardware limit the analysis | Restrict to 1–40 Hz; report fit quality; treat findings as relative |
 | Age is coarse (groups only) | Use ordinal age_group |
 | Scoop by the data owners (Sapien Labs) | Pre-register and post the preprint quickly; cite them |
-| specparam fails on noisy recordings | Fit-quality thresholds; sensitivity analysis |
+| specparam fails on noisy recordings | Fit-quality thresholds; sensitivity analysis; null calibration |
+| Montages differ (136 in Tanzania) | O1 + O2 primary region; montage family as covariate; within-country analysis |
+| Selection of the 2,000 undocumented | Ask the data owners; state as a limitation |
+| ID prefix may not be the field researcher | Confirm with the data owners; fall back to site-level models |
 
 ## 11. Key references
 
-- Vianney, J.-M. et al. (2025). *eNeuro*. doi:10.1523/ENEURO.0006-25.2025
-- Parameshwaran, D. & Thiagarajan, T. C. bioRxiv doi:10.1101/125898
-- Parameshwaran, D. & Thiagarajan, T. C. (2021). *Sci Rep*. doi:10.1038/s41598-021-85236-z
-- Li, M. et al. (2022). HarMNqEEG. *NeuroImage*. doi:10.1016/j.neuroimage.2022.119190
-- Donoghue, T. et al. (2020). Parameterizing neural power spectra. *Nat Neurosci* 23, 1655
-- Voytek, B. et al. (2015). Age-related changes in 1/f neural electrophysiological noise. *J Neurosci* 35, 13257
-- Gramfort, A. et al. (2013). MNE-Python. *Front Neurosci*
+Checked against Crossref and PubMed/Europe PMC on 2026-11-22 (details in the research-plan doc, section A6). Author lists of 20+ are shortened here; use full APA 7 form in the paper.
 
-> ⚠️ These references were compiled by an AI research assistant. Verify every citation against the source before using it.
+- Vianney, J.-M., Swaminathan, S., Newson, J. J., Parameshwaran, D., … Thiagarajan, T. C. (2025). EEG data quality in large-scale field studies in India and Tanzania. *eNeuro, 12*(7), ENEURO.0006-25.2025. https://doi.org/10.1523/ENEURO.0006-25.2025
+- Parameshwaran, D., & Thiagarajan, T. C. (2017). *Modernization, wealth and the emergence of strong alpha oscillations in the human EEG* [Preprint]. bioRxiv. https://doi.org/10.1101/125898
+- Parameshwaran, D., Sathishkumar, S., & Thiagarajan, T. C. (2021). The impact of socioeconomic and stimulus inequality on human brain physiology. *Scientific Reports, 11*, 7439. https://doi.org/10.1038/s41598-021-85236-z
+- Bhavnani, S., Parameshwaran, D., Sharma, K. K., Mukherjee, D., Divan, G., Patel, V., & Thiagarajan, T. C. (2022). The acceptability, feasibility, and utility of portable electroencephalography to study resting-state neurophysiology in rural communities. *Frontiers in Human Neuroscience, 16*. https://doi.org/10.3389/fnhum.2022.802764
+- Li, M., Wang, Y., Lopez-Naranjo, C., … Valdes-Sosa, P. A. (2022). Harmonized-Multinational qEEG norms (HarMNqEEG). *NeuroImage, 256*, 119190. https://doi.org/10.1016/j.neuroimage.2022.119190
+- Donoghue, T., Haller, M., Peterson, E. J., … Voytek, B. (2020). Parameterizing neural power spectra into periodic and aperiodic components. *Nature Neuroscience, 23*(12), 1655–1665. https://doi.org/10.1038/s41593-020-00744-x
+- Voytek, B., Kramer, M. A., Case, J., Lepage, K. Q., Tempesta, Z. R., Knight, R. T., & Gazzaley, A. (2015). Age-related changes in 1/f neural electrophysiological noise. *Journal of Neuroscience, 35*(38), 13257–13265. https://doi.org/10.1523/JNEUROSCI.2332-14.2015
+- Corcoran, A. W., Alday, P. M., Schlesewsky, M., & Bornkessel-Schlesewsky, I. (2018). Toward a reliable, automated method of individual alpha frequency (IAF) quantification. *Psychophysiology, 55*(7), e13064. https://doi.org/10.1111/psyp.13064
+- Merkin, A., et al. (2023). Do age-related differences in aperiodic neural activity explain differences in resting EEG alpha? *Neurobiology of Aging, 121*, 78–87. https://doi.org/10.1016/j.neurobiolaging.2022.09.003
+- Cesnaite, E., et al. (2023). Alterations in rhythmic and non-rhythmic resting-state EEG activity and their link to cognition in older age. *NeuroImage, 268*, 119810. https://doi.org/10.1016/j.neuroimage.2022.119810
+- Tröndle, M., et al. (2023). Decomposing age effects in EEG alpha power. *Cortex, 161*, 116–144. https://doi.org/10.1016/j.cortex.2023.02.002
+- Gerster, M., et al. (2022). Separating neural oscillations from aperiodic 1/f activity: Challenges and recommendations. *Neuroinformatics, 20*(4), 991–1012. https://doi.org/10.1007/s12021-022-09581-8
+- Simonsohn, U., Simmons, J. P., & Nelson, L. D. (2020). Specification curve analysis. *Nature Human Behaviour, 4*(11), 1208–1214. https://doi.org/10.1038/s41562-020-0912-z
+- Lakens, D. (2017). Equivalence tests: A practical primer for t tests, correlations, and meta-analyses. *Social Psychological and Personality Science, 8*(4), 355–362. https://doi.org/10.1177/1948550617697177
+- Gramfort, A., Luessi, M., Larson, E., Engemann, D. A., Strohmeier, D., Brodbeck, C., Goj, R., Jas, M., Brooks, T., Parkkonen, L., & Hämäläinen, M. (2013). MEG and EEG data analysis with MNE-Python. *Frontiers in Neuroscience, 7*, 267. https://doi.org/10.3389/fnins.2013.00267
+
+> These references were compiled and checked with an AI research assistant. Open each one yourself before citing it in the paper.

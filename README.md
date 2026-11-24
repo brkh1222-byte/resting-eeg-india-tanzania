@@ -10,7 +10,22 @@ Download ds007358 → pre-register → MNE preprocessing → Welch PSD → specp
 
 ## Status
 
-🟡 Proposal stage (Nov 2026)
+🟡 Pipeline written; pre-registration drafted and awaiting the researcher's review and commit (Nov 2026). Spectral analysis is locked until then (`src/prereg_guard.py`).
+
+## Run order
+
+```
+uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -r requirements.txt
+.venv/bin/python src/download.py        # ~12.6 GB, eyes-closed + eyes-open only
+.venv/bin/python src/metadata.py        # participants + montage census (no spectra)
+.venv/bin/python src/preprocess.py      # epochs + quality metrics (no spectra)
+# --- commit preregistration/prereg.md here ---
+.venv/bin/python src/psd.py
+.venv/bin/python src/fit_specparam.py
+.venv/bin/python src/models.py
+.venv/bin/python src/robustness.py
+.venv/bin/python src/figures.py
+```
 
 ## Data credit
 
