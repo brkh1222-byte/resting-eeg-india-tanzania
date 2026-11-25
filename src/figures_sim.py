@@ -54,7 +54,7 @@ def fig_s1(d):
             ax.plot(m.index, 100 * m.values, "o-", color=LEN_COL[int(sec)], label=f"{int(sec)} s")
         ax.axvline(cfg.MIN_PEAK_HEIGHT, color=MUTED, lw=0.8, ls=":")
         ax.set_title(title, fontsize=9, color=INK)
-        ax.set_xlabel("True alpha height above the 1/f background (log10)")
+        ax.set_xlabel("True alpha height (log10 above background)")
         ax.set_ylim(0, 102)
     axes[0].set_ylabel("Recordings with a reported peak (%)")
     axes[0].text(0.0, 4, "true height 0 =\nno alpha", fontsize=7, color=MUTED)
@@ -90,6 +90,7 @@ def fig_s3(d):
     axes[0].set_ylabel("IAF mean absolute error (Hz)")
     axes[0].set_ylim(bottom=0)
     axes[1].axhline(0, color=MUTED, lw=0.8)
+    axes[1].set_ylim(-0.1, 0.1)
     axes[1].set_xlabel("True exponent")
     axes[1].set_ylabel("Exponent bias (estimate - truth)")
     lim = [0.15, 0.85]

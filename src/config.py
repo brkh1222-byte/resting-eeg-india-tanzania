@@ -73,6 +73,13 @@ PEAK_WIDTH_LIMITS = (1.0, 8.0)
 MAX_N_PEAKS = 6
 MIN_PEAK_HEIGHT = 0.1                      # log10 power above the aperiodic fit
 PEAK_THRESHOLD = 2.0                       # specparam default (SD units)
+# Optional extra rule for "alpha present": the FITTED height of the peak must reach
+# this value. None reproduces the draft pre-registration exactly (any returned peak
+# counts). The simulation study (notes/simulation_validation.md) found that the draft
+# rule reports a peak in about 3 of 4 recordings that contain no alpha, and that
+# 0.25 keeps this at or below 5% for recordings with >= 60 s of clean data.
+# The researcher decides; the value must match preregistration/prereg.md.
+PRESENCE_MIN_FITTED_HEIGHT = None
 ALPHA_BAND = (7.0, 14.0)
 THETA_BAND = (4.0, 7.0)
 R2_FLOOR = 0.90

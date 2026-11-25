@@ -68,6 +68,8 @@ def features(fm, band=C.ALPHA_BAND) -> dict:
            "r2": fm.r_squared_, "fit_error": fm.error_}
     peaks = fm.peak_params_ if fm.peak_params_.size else np.empty((0, 3))
     a = peaks[(peaks[:, 0] >= band[0]) & (peaks[:, 0] <= band[1])]
+    if C.PRESENCE_MIN_FITTED_HEIGHT is not None:
+        a = a[a[:, 1] >= C.PRESENCE_MIN_FITTED_HEIGHT]
     out["alpha_present"] = bool(len(a))
     out["n_alpha_peaks"] = int(len(a))
     if len(a):

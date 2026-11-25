@@ -297,10 +297,49 @@ def run_experiments(out: Path, n: int, only: list[str] | None = None, seed: int 
         print(f"{name}: {len(rows)} simulations in {time.time() - t0:.0f} s", flush=True)
 
 
+def run_threshold_calibration(out: Path, n: int = 200, seed: int = 20261126) -> None:
+    """Experiment K: how the presence rule behaves under different thresholds.
+
+    Each simulated recording is fitted with every minimum peak height of the
+    robustness grid (plus 0.4), with a stricter peak threshold (3 SD), and from a
+    mean-Welch spectrum. For every fit we keep whether a 7-14 Hz peak was returned
+    and the height and width of the tallest one, so that any rule of the form
+    "fitted height >= T" can be evaluated afterwards. Output: exp_K.csv (long format).
+    """
+    import fit_specparam as F
+    path = out / "exp_K.csv"
+    if path.exists():
+        print("K: exists, skipped")
+        return
+    rng = np.random.default_rng(seed)
+    variants = [("median", mh, 2.0) for mh in (0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4)] + \
+               [("median", 0.1, 3.0), ("mean", 0.1, 2.0), ("mean", 0.3, 2.0)]
+    rows, t0 = [], time.time()
+    for h, sec in itertools.product([0, 0.1, 0.2, 0.3, 0.4, 0.6], [60, 120, 180]):
+        for i in range(n):
+            t = _draw(rng, exponent=rng.uniform(0.5, 2.0), alpha_height=h)
+            x = synthesise(t, sec, SFREQ, rng)
+            spectra = {avg: pipeline_spectrum(x, SFREQ, average=avg) for avg in ("median", "mean")}
+            for avg, mh, thr in variants:
+                f, p, info = spectra[avg]
+                old_thr, C.PEAK_THRESHOLD = C.PEAK_THRESHOLD, thr
+                try:
+                    ft = F.features(F.fit_one(f, p.mean(axis=0), min_height=mh))
+                finally:
+                    C.PEAK_THRESHOLD = old_thr
+                rows.append(dict(sim=f"{h}_{sec}_{i}", true_alpha_height=h, rec_sec=sec, true_exponent=t.exponent,
+                                 true_alpha_cf=t.alpha_cf, average=avg, min_peak_height=mh, peak_threshold=thr,
+                                 alpha_present=ft["alpha_present"], alpha_pw=ft.get("alpha_pw"),
+                                 alpha_bw=ft.get("alpha_bw"), iaf=ft.get("iaf"), r2=ft.get("r2"),
+                                 fit_error=ft.get("fit_error"), exponent=ft.get("exponent")))
+    pd.DataFrame(rows).to_csv(path, index=False)
+    print(f"K: {len(rows)} fits in {time.time() - t0:.0f} s", flush=True)
+
+
 def summarise(out: Path) -> pd.DataFrame:
     """One row per experiment cell: detection rates and recovery errors."""
     frames = []
-    for path in sorted(out.glob("exp_*.csv")):
+    for path in sorted(out.glob("exp_[A-J].csv")):
         d = pd.read_csv(path)
         d["exp"] = path.stem[-1]
         d["alpha_present"] = d["alpha_present"].astype(str).str.lower().eq("true")
@@ -458,6 +497,7 @@ def main() -> None:
     e.add_argument("--out", type=Path, required=True)
     e.add_argument("--n", type=int, default=200)
     e.add_argument("--only", type=str, default="")
+    e.add_argument("--n-calibration", type=int, default=200)
     c = sub.add_parser("cohort")
     c.add_argument("--root", type=Path, required=True)
     c.add_argument("--n-per-site", type=int, default=300)
@@ -465,7 +505,10 @@ def main() -> None:
     c.add_argument("--jobs", type=int, default=1)
     args = ap.parse_args()
     if args.cmd == "experiments":
-        run_experiments(args.out, args.n, [s for s in args.only.split(",") if s] or None)
+        only = [s for s in args.only.split(",") if s] or None
+        run_experiments(args.out, args.n, only)
+        if not only or "K" in only:
+            run_threshold_calibration(args.out, args.n_calibration)
         print(summarise(args.out).round(3).to_string())
     else:
         root = args.root.resolve()

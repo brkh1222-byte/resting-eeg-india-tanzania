@@ -182,3 +182,16 @@ def test_simulated_cohort_end_to_end(tmp_path):
     # nothing may be written into the repository's own results
     if "STATUS: DRAFT" in (ROOT / "preregistration" / "prereg.md").read_text(encoding="utf-8"):
         assert not (ROOT / "results" / "features.csv").exists()
+
+
+def test_optional_fitted_height_rule(monkeypatch):
+    """With PRESENCE_MIN_FITTED_HEIGHT set, a no-alpha recording is rarely called 'present'."""
+    rng = np.random.default_rng(6)
+    x = S.synthesise(S.Truth(alpha_height=0.0), 180, 128.0, rng)
+    f, p, _ = S.pipeline_spectrum(x, 128.0)
+    fm = F.fit_one(f, p.mean(axis=0))
+    monkeypatch.setattr(C, "PRESENCE_MIN_FITTED_HEIGHT", 0.25)
+    assert F.features(fm)["alpha_present"] is False
+    x = S.synthesise(S.Truth(alpha_height=0.6), 180, 128.0, rng)
+    f, p, _ = S.pipeline_spectrum(x, 128.0)
+    assert F.features(F.fit_one(f, p.mean(axis=0)))["alpha_present"] is True
