@@ -35,7 +35,12 @@ participants in India and 1,000 in Tanzania (OpenNeuro ds007358) with spectral
 parameterization (specparam). The analysis plan was written before any spectrum of the
 real recordings was computed. Before running it, we tested the full pipeline on simulated
 recordings with known ground truth at the headset's 128~Hz sampling rate.
-\textbf{Simulation results:} \TBD{two sentences, filled from Section~\ref{sec:simresults}}.
+\textbf{Simulation results:} with common settings (minimum peak height 0.1 $\log_{10}$
+units), specparam reported an alpha peak in 73--83\% of simulated recordings that contained
+no alpha, at every recording length from 30 to 180~s. Requiring a fitted peak height of at
+least 0.25 reduced this to 4\% for 60~s recordings and to 0\% for longer ones, while peaks
+of true height 0.3 or more were still found in 98--100\% of recordings; weaker peaks could
+not be separated from chance.
 \textbf{Real-data results:} \TBD{presence rate per site with 95\% CI (H1); quality and
 income as predictors of a missing peak (H2); age slopes of alpha frequency, aperiodic
 exponent and alpha power (H3--H5); one sentence on meaning}. Differences between the two
@@ -336,19 +341,370 @@ primary settings. Because the truth is known, we can count how often a peak is r
 when none exists (a false ``present''), how often a true peak is missed (a false
 ``absent''), and how accurately IAF, the exponent and peak height are recovered.
 
-\TBD{The description of the experiments below is filled in together with
-Section~\ref{sec:simresults}.}
+Eleven experiments were run (Table~\ref{tab:simdesign}). The main experiment (A) crosses
+four exponents (0.5, 1.0, 1.5, 2.0), eight alpha heights (0, 0.05, 0.1, 0.15, 0.2, 0.3,
+0.5, 0.8) and four recording lengths (30, 60, 120 and 180~s of clean data; the real usable
+recordings have at least 60~s and a median of 166--176~s), with 40 recordings per cell. In
+every recording the alpha centre was drawn from 8--12~Hz, its width $s$ from 0.6--1.5~Hz
+and the offset from 0.5--1.5. Experiments B to J change one condition at a time (80
+recordings per cell): 50~Hz line noise, a white sensor-noise floor, a low-pass filter
+inside the fit range, alpha at the edges of the 7--14~Hz window, intermittent alpha, other
+peaks without alpha, 256~Hz sampling, artefact bursts with flagged samples, and the fit
+ranges and aperiodic modes of the robustness grid. Experiment K (200 recordings per cell,
+exponent drawn from 0.5--2.0) compares alternative presence rules on the same recordings.
+A proportion estimated from 80 recordings has a standard error of at most 5.6 percentage
+points, from 160 at most 4, and from 200 at most 3.5.
 
-%%SIMMETHODS%%
+Finally, we simulated a whole study: two sites of 400 participants each, with planted age
+slopes for IAF ($-0.12$~Hz per decade) and the exponent ($-0.06$ per decade), no age effect
+on alpha height, no income effect, 8\% of participants with no alpha, a sensor-noise floor
+that varies with a latent quality variable, eyes-open recordings with reduced alpha, and
+field-researcher groups. The statistical models were run on this cohort exactly as they
+will be run on the real data. The simulation code, its outputs and automated tests are in
+the repository (\texttt{src/simulate.py}, \texttt{results/simulation/},
+\texttt{tests/}).
+
+\begin{table}[ht]
+\centering
+\caption{Simulation experiments. All recordings are sampled at 128~Hz unless stated.}
+\label{tab:simdesign}
+\begin{tabular}{llr}
+\toprule
+ & Condition varied & Recordings \\
+\midrule
+A & Exponent $\times$ alpha height $\times$ recording length & 5,120 \\
+B & 50~Hz line noise, amplitude 0--200~$\mu$V & 800 \\
+C & Sensor-noise floor equal to the background at 40, 25, 15 or 8~Hz & 1,200 \\
+D & Low-pass filter at 43 or 35~Hz & 720 \\
+E & Alpha centre from 6.5 to 14.5~Hz & 800 \\
+F & Alpha present 100\% to 20\% of the time; median and mean spectra & 1,600 \\
+G & Theta or beta peak without alpha; very broad or narrow alpha & 560 \\
+H & Sampling rate 128 or 256~Hz & 480 \\
+I & Artefact bursts and flagged samples & 960 \\
+J & Fit ranges and aperiodic modes of the robustness grid & 960 \\
+K & Alternative presence rules (ten fits per recording) & 3,600 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 
 % ---------------------------------------------------------------------------
 \section{Results}
 
-%%SIMRESULTS%%
+\subsection{Simulation study}
+\label{sec:simresults}
 
-%%REALRESULTS%%
+\subsubsection{The drafted presence rule reports alpha in most recordings that have none}
 
-%%DISCUSSION%%
+With the primary settings (minimum peak height 0.1, peak threshold 2~SD), specparam
+returned a peak in 7--14~Hz in 73--75\% of simulated recordings that contained no alpha
+(Table~\ref{tab:simdetect}, Figure~\ref{fig:simdetect}). The rate did not fall with
+recording length and did not depend on the exponent (65--88\% across the 16 combinations
+of exponent and length, 40 recordings each). An independent set of recordings (experiment
+K) gave 83\%, 78\% and 74\% at 60, 120 and 180~s. True peaks were almost never missed: a
+peak of height 0.2 or more was found in every recording, and a peak of height 0.1 in 91\%
+of 60~s recordings and 99\% of longer ones.
+
+The reason is the random scatter of the spectrum. With 0.25~Hz bins and 1--3 minutes of
+data, the median fit error was 0.069 $\log_{10}$ units at 60~s, 0.049 at 120~s and 0.040 at
+180~s. The 7--14~Hz window contains 29 bins, so a bump of 0.1 somewhere in the window is
+common by chance. The false peaks were small (median fitted height 0.13). Of them, 28\% had
+a fitted height below 0.1, because the minimum height is applied while peaks are searched
+for and not to the final fit.
+
+The Savitzky--Golay detector reported a peak in 32\%, 19\% and 26\% of no-alpha recordings
+at 60, 120 and 180~s. It found a peak of height 0.2 in 98--99\% of recordings and a peak of
+height 0.1 in 61--86\%.
+
+\begin{table}[ht]
+\centering
+\caption{Share of simulated recordings in which the primary specparam settings returned a
+peak in 7--14~Hz, by true alpha height and recording length (experiment A, pooled over
+four exponents; 160 recordings per cell). The first row is the false ``present'' rate.}
+\label{tab:simdetect}
+\begin{tabular}{lrrrr}
+\toprule
+True alpha height ($\log_{10}$) & 30~s & 60~s & 120~s & 180~s \\
+\midrule
+0 (no alpha) & 75\% & 74\% & 73\% & 75\% \\
+0.05 & 87\% & 89\% & 89\% & 92\% \\
+0.10 & 92\% & 91\% & 99\% & 99\% \\
+0.15 & 96\% & 98\% & 100\% & 100\% \\
+0.20 and above & 100\% & 100\% & 100\% & 100\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.9\linewidth]{figures/figS1_detection}
+\caption{Share of simulated recordings with a reported alpha peak, by true peak height and
+recording length. Left: specparam with the primary settings. Right: the Savitzky--Golay
+detector. A true height of 0 means that the recording contains no alpha, so the leftmost
+points are false ``present'' rates. The dotted line marks the minimum peak height (0.1).}
+\label{fig:simdetect}
+\end{figure}
+
+\subsubsection{A threshold on the fitted peak height restores a low false ``present'' rate}
+
+Table~\ref{tab:simrules} compares alternative rules on the same recordings. In no-alpha
+recordings, the largest chance peak in the alpha window had a fitted height whose 95th
+percentile was 0.25 at 60~s, 0.17 at 120~s and 0.13 at 180~s. A rule that keeps the fit
+settings but counts alpha as present only if the fitted height of the tallest peak is at
+least 0.25 gave a false ``present'' rate of 4\% at 60~s and 0\% at 120 and 180~s, and
+detected 98--100\% of peaks of true height 0.3 or more. Raising specparam's own minimum
+height to 0.25 or 0.30 was less effective for short recordings (60\% and 22\% false
+``present'' at 60~s). A peak threshold of 3~SD left the false ``present'' rate at 22--24\%.
+Using mean instead of median spectra did not help (62--82\%).
+
+No rule separated peaks of true height 0.1--0.2 from chance. With the 0.25 rule, a peak of
+height 0.2 was detected in 69\%, 52\% and 34\% of recordings at 60, 120 and 180~s (it is
+found less often in longer recordings because its fitted height is overestimated less).
+In this dataset, ``alpha present'' can therefore only mean a peak of roughly twice the
+background power or more. \TBD{state the rule adopted in the final pre-registration.}
+
+\begin{table}[ht]
+\centering
+\caption{Alternative presence rules (experiment K; 200 recordings per cell). False
+``present'': share of no-alpha recordings with a reported peak at 60 / 120 / 180~s.
+Detection: share of recordings with a true peak of the given height in which it is
+reported, pooled over lengths (three values are for 60 / 120 / 180~s).}
+\label{tab:simrules}
+\begin{tabular}{p{0.34\linewidth}p{0.17\linewidth}p{0.17\linewidth}p{0.17\linewidth}}
+\toprule
+Rule & False ``present'' & Detects 0.2 & Detects 0.3 \\
+\midrule
+Drafted: minimum height 0.10, threshold 2~SD & 83 / 78 / 74\% & 100\% & 100\% \\
+Peak threshold 3~SD & 24 / 23 / 22\% & 94\% & 100\% \\
+Minimum height 0.20 & 82 / 29 / 3\% & 100\% & 100\% \\
+Minimum height 0.25 & 60 / 3 / 0\% & 86\% & 100\% \\
+Minimum height 0.30 & 22 / 0 / 0\% & 54\% & 98\% \\
+Minimum height 0.40 & 0 / 0 / 0\% & 7\% & 46\% \\
+Fitted height $\geq$ 0.20 & 21 / 0 / 0\% & 88 / 90 / 86\% & 99 / 100 / 100\% \\
+Fitted height $\geq$ 0.25 & 4 / 0 / 0\% & 69 / 52 / 34\% & 98 / 100 / 99\% \\
+Fitted height $\geq$ 0.30 & 1 / 0 / 0\% & 32 / 11 / 4\% & 89 / 88 / 78\% \\
+Mean spectra, minimum height 0.10 & 82 / 80 / 62\% & 100\% & 100\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Recovery of the exponent, IAF and peak height}
+
+The aperiodic exponent was recovered with a small positive bias of 0.014--0.028 for all
+true exponents and lengths. The standard deviation of its error was 0.055 at 60~s, 0.037 at
+120~s and 0.030 at 180~s (Figure~\ref{fig:simrecovery}). For a peak of true height 0.3, the
+mean absolute error of IAF was 0.36~Hz at 60~s, 0.27~Hz at 120~s and 0.24~Hz at 180~s; for
+height 0.5 it was 0.25, 0.19 and 0.19~Hz. Errors above 1~Hz occurred in 1\% or fewer of
+recordings for heights of 0.5 or more, but in 3--8\% for height 0.2, where the tallest peak
+in the window is sometimes a chance peak. Small peaks were overestimated: for true heights
+of 0.2--0.3 the fitted height was 0.02--0.08 too high at 60~s or more. Results at 256~Hz
+did not differ from those at 128~Hz.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\linewidth]{figures/figS3_recovery}
+\caption{Recovery of known parameters in simulated recordings (experiment A, primary
+settings). Left: mean absolute error of IAF among detected peaks. Middle: bias of the
+aperiodic exponent. Right: fitted against true peak height; the dotted line is identity.}
+\label{fig:simrecovery}
+\end{figure}
+
+\subsubsection{The simulated cohort}
+
+In the simulated two-site study the planted age slopes were recovered
+(Table~\ref{tab:simcohort}). Among participants with planted alpha, 1.1\% were called
+absent in each site. Among those planted with no alpha, 43\% and 48\% were called present
+under the drafted rule (fewer than in experiment A because this cohort includes a
+sensor-noise floor, which lowers the rate; see below). Two tests behaved in a way that
+matters for the real analysis. The income odds ratio, planted at 1, had a 90\% interval of
+0.72--1.55 with 20 missing peaks among 400 participants, so equivalence within 0.80--1.25
+could not be shown although it was true. And alpha power in the first site, planted with
+no age effect, had an interval inside the equivalence bounds but did not survive Holm's
+correction (adjusted $p = 0.24$).
+
+\begin{table}[ht]
+\centering
+\caption{Recovery of planted effects in a simulated cohort of 400 participants per site.
+Intervals are 95\% for H3 and H4 and 90\% for H5.}
+\label{tab:simcohort}
+\begin{tabular}{lrrr}
+\toprule
+ & Planted & Simulated site 1 & Simulated site 2 \\
+\midrule
+IAF slope, Hz per decade (H3) & $-0.12$ & $-0.144$ [$-0.213$, $-0.076$] & $-0.061$ [$-0.124$, $0.002$] \\
+Exponent slope per decade (H4) & $-0.06$ & $-0.062$ [$-0.081$, $-0.044$] & $-0.069$ [$-0.085$, $-0.053$] \\
+Alpha power slope, SD per decade (H5) & $0$ & $-0.039$ [$-0.099$, $0.022$] & $0.005$ [$-0.052$, $0.062$] \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Conditions under which the method fails}
+
+\emph{Fit-quality floor.} $R^2$ depends on the exponent as well as on fit quality, because
+a flat spectrum has little variance for the model to explain. Simulated spectra with
+exponent 0.5, fitted without error, fell below $R^2 = 0.90$ in 94\% of 60~s recordings,
+58\% of 120~s recordings and 4\% of 180~s recordings. Spectra with exponents of 1.5 or more
+never did. The mean absolute fit error was the same for all exponents. A floor on $R^2$
+therefore removes flat-spectrum recordings selectively.
+
+\emph{Sensor noise.} A white noise floor as strong as the background at 40~Hz lowered the
+fitted exponent by 0.20--0.27; at 25~Hz by 0.35--0.44; at 15~Hz by about 0.6; and at 8~Hz
+by about 0.9, where a peak of height 0.2 was found in only 43\% of recordings. Broadband
+noise thus makes a spectrum look flatter and can hide a moderate peak. It also lowered the
+false ``present'' rate of the drafted rule (to 38\%, 23\%, 10\% and 13\%).
+
+\emph{Filters inside the fit range.} A low-pass filter at 43~Hz raised the fitted exponent
+by 0.22, and one at 35~Hz by 0.78.
+
+\emph{Window edges.} A peak centred at exactly 7 or 14~Hz was reported in 95\% and 93\% of
+recordings, but its frequency was wrong by more than 1~Hz in about 30\%. Between 7.25 and
+13.75~Hz detection was 100\%.
+
+\emph{Intermittent alpha.} When alpha of height 0.6 was present half of the time, its
+fitted height fell to 0.34 with median spectra and 0.39 with mean spectra; at 20\% of the
+time, to 0.17 and 0.20. With a threshold on fitted height, such recordings can be counted
+as having no peak.
+
+\emph{Heavy artefact.} With large bursts in 10\% of the recording, the within-person
+outlier rule removed them and estimates were unaffected. With bursts in 30\%, the rule
+removed nothing, the exponent was off by $-0.6$ to $-0.7$ and the median $R^2$ was 0.3.
+
+\emph{Line noise.} Line noise at 50~Hz of up to 200~$\mu$V had no effect on detection, IAF
+or the exponent, as it lies outside the fit range.
+
+\emph{Aperiodic mode and fit range.} Fitting a knee to spectra without one made the
+exponent up to three times more variable, and the 3--30~Hz range raised the false
+``present'' rate to 91\%.
+
+
+\subsection{Sample and data quality}
+\TBD{Table 1 from \texttt{results/descriptives.csv}: by site, n, sex, age distribution,
+clean seconds, share of epochs kept, EQ, line-noise ratio, number of failed fits, number of
+fits below the fit-quality criterion. Figure 1: participant flow (\texttt{fig1\_flow}).
+Figure 2: example fits (\texttt{fig2\_examples}).}
+
+\subsection{H1: presence of an alpha peak}
+\TBD{Per site: share present with Wilson 95\% CI, exact binomial $p$ against 0.80,
+Holm-adjusted $p$, supported or not. Figure 3: presence against the threshold
+(\texttt{fig3\_threshold}), with the simulated false ``present'' rate at each threshold
+for comparison. Null calibration for each site (\texttt{results/robustness\_summary.csv}).
+Source: \texttt{results/confirmatory.csv}.}
+
+\subsection{H2: recording quality, income and missing peaks}
+\TBD{Odds ratio per SD of the quality composite with 95\% CI, per site (H2a). Odds ratio
+per SD of income rank with 90\% CI, India (H2b), with the number of missing peaks and the
+power note. Firth estimates as sensitivity. Figure 4 (\texttt{fig4\_forest}).}
+
+\subsection{H3--H5: age}
+\TBD{Slopes per decade with intervals for IAF, exponent and standardised alpha power, per
+site; Table 2 with model coefficients; Figure 5 (\texttt{fig5\_age}).}
+
+\subsection{V1: reactivity}
+\TBD{Share of participants with stronger alpha eyes-closed than eyes-open, with CI, per
+site.}
+
+\subsection{Robustness}
+\TBD{Specification curve (Figure 6, \texttt{fig6\_spec\_curve}); leave-one-researcher-out
+ranges; raw 7--12~Hz maximum against specparam IAF; $\kappa$ between detectors; models
+without the quality covariate; analysis without the 256~Hz recordings.}
+
+\subsection{Descriptive comparison of the two sites (exploratory)}
+\TBD{Ages 18--64 only, estimates with confidence intervals and no $p$-values. Any
+difference is described as a difference in environment, recording context and data
+quality.}
+
+
+% ---------------------------------------------------------------------------
+\section{Discussion}
+
+\subsection{What the simulation study shows}
+
+Spectral parameterization is often presented as the remedy for peak detection that
+ignores the aperiodic background. Our simulations show that, at the frequency resolution
+and recording lengths of field EEG, it brings a problem of its own. With common settings
+and a minimum peak height of 0.1 $\log_{10}$ units, a peak was reported in the alpha range
+in about three of four recordings that contained no alpha. A presence rate computed in
+this way would be close to 75\% in a sample with no alpha at all. It could not have tested
+whether alpha is ``missing'' in anyone. The same caution applies to any study that reads
+``a peak was fitted'' as ``an oscillation is present'' without measuring the false-positive
+rate of its own pipeline \citep[see also][]{gerster2022,donoghue2022,ostlund2022}.
+
+The simulations also show a way out and its price. A threshold of 0.25 on the fitted
+height kept false detections at or below about 5\% for recordings of one minute or more,
+and still found practically every peak of true height 0.3 or more. The price is that peaks
+of height 0.1--0.2 cannot be told from chance with one to three minutes of data. For this
+dataset, the question ``is alpha absent?'' therefore has to be replaced by ``is there an
+alpha peak of at least about twice the background power?''. Weak alpha, which is what
+\citet{parameshwaran2017} themselves describe as a continuum, lies partly below the
+resolution of recordings of this length.
+
+Three further results shape how the real data should be read. First, broadband sensor
+noise flattens the fitted exponent and can hide a moderate peak. A recording of lower
+quality will then tend to show a flatter spectrum and a missing peak for technical
+reasons, which is the mechanism behind our hypothesis H2a and a reason to treat the
+exponent as comparable within this dataset only. Second, a fit-quality floor based on
+$R^2$ removes flat spectra selectively, which would bias an analysis of how the exponent
+changes with age. Third, the planned equivalence test for income (H2b) has little chance
+of succeeding with a few dozen missing peaks, even if income has no effect at all, so a
+failure of that test must be read as inconclusive.
+
+\subsection{Real-data findings}
+\TBD{(1) What the presence rate means for the 2017 claim; if weak or missing alpha
+remains, what recording quality explains and what it does not. (2) The age results
+compared with \citet{merkin2023}, \citet{cesnaite2023} and \citet{trondle2023}, and with
+the raw peak frequencies of \citet{vianney2025}. (3) What the robustness analyses change.}
+
+\subsection{Site differences are not population traits}
+
+India and Tanzania differ in this dataset in ways that have nothing to do with the brains
+of the people recorded. Tanzania has 136 electrode layouts and India 10. Different field
+teams made the recordings, in different settings. The Indian sample is much younger. How
+the 2,000 public participants were chosen from the 7,933 is not documented. Any difference
+between the two sites, and any difference between income groups within India, is a
+difference between recording contexts, environments and levels of data quality as much as
+between groups of people. We report site differences descriptively and draw no conclusion
+about innate characteristics of any population. \TBD{add the specific differences observed.}
+
+\subsection{Limitations}
+
+The simulations use stationary Gaussian noise and a spectrum that follows the specparam
+model exactly. Real EEG has muscle activity, non-stationary noise and possibly a spectral
+knee, so real false-positive rates may differ from the simulated ones in either direction.
+Simulation cells have 40 to 200 repetitions, so differences of a few percentage points are
+within noise. The built-in filters of the headset are not documented in the public files,
+and the files are sampled at 128~Hz although the source paper states 256~Hz. Age is known
+only in bins. Income is analysed in one country and falls mostly in two bins. The grouping
+of participants by field researcher rests on an undocumented reading of the participant
+identifiers. IAF and alpha power are defined only when a peak is detected. The design is
+cross-sectional, so age differences are not changes within people. \TBD{limitations that
+emerge from the real analysis.}
+
+\subsection{Conclusion}
+\TBD{Two or three sentences after the real analysis.}
+
+% ---------------------------------------------------------------------------
+\section*{Statements}
+
+\paragraph{Data and code availability.} The EEG data are public: OpenNeuro ds007358,
+version 1.0.0, CC0 \citep{openneuro_ds007358}. All code, the pre-registration, the
+simulation outputs and the derived tables are in the project repository
+(\url{https://github.com/brkh1222-byte/resting-eeg-india-tanzania}). \TBD{archive DOI.}
+
+\paragraph{Ethics.} This is a secondary analysis of de-identified, openly licensed data.
+Consent and ethical approvals of the original study are reported by \citet{vianney2025}.
+
+\paragraph{Software.} Python 3.12; MNE-Python 1.10.1 \citep{gramfort2013}; fooof 1.1.1
+\citep{donoghue2020}; SciPy 1.15.3 \citep{virtanen2020}; statsmodels 0.14.5
+\citep{seabold2010}.
+
+\paragraph{Author contributions.} [AUTHORS --- TBD]
+
+\paragraph{Use of AI tools.} [AI-USE STATEMENT --- TBD]
+
+\paragraph{Competing interests.} \TBD{to be declared by the authors.}
+
+\paragraph{Funding.} \TBD{to be declared by the authors.}
+
 
 \bibliographystyle{apalike}
 \bibliography{references}
